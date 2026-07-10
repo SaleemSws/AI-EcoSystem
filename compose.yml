@@ -19,6 +19,51 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: labeluser
+      POSTGRES_PASSWORD: labelpassword
+      POSTGRES_DB: labelstudio_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  label-studio:
+    image: heartexlabs/label-studio:latest
+    container_name: label_studio
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - label-studio-data:/label-studio/data
+    environment:
+      - DJANGO_DB=default
+      - POSTGRE_NAME=labelstudio_db
+      - POSTGRE_USER=labeluser
+      - POSTGRE_PASSWORD=labelpassword
+      - POSTGRE_HOST=postgres
+      - POSTGRE_PORT=5432
+
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK=false
 volumes:
   redis-data:
+  postgresql-data:
+  label-studio-data:
+
